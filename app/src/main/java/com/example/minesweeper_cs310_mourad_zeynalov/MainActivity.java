@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
+import android.os.Handler;
+import android.content.Intent;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -23,12 +25,15 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<TextView> cell_tvs;
 
     public int mines[][];
-    public char realBoard[][];
-    public char myBoard[][];
+    public char trueGame[][];
+    public char currentGame[][];
     public int movesLeft = ROW_COUNT * COLUMN_COUNT - 4;
     public boolean gameOver = false;
     public boolean flagging = false;
     public int flagCount = 4;
+    private int clock = 0;
+    private boolean running = false;
+
 
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
@@ -66,8 +71,8 @@ public class MainActivity extends AppCompatActivity {
         tvb.setOnClickListener(this::onClickFlag);
 
         mines = new int[4][2];
-        realBoard = new char[ROW_COUNT][COLUMN_COUNT];
-        myBoard = new char[ROW_COUNT][COLUMN_COUNT];
+        trueGame = new char[ROW_COUNT][COLUMN_COUNT];
+        currentGame = new char[ROW_COUNT][COLUMN_COUNT];
 
         initialise();
         placeMines();
@@ -82,8 +87,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void flipTextView(int row, int col) {
-        TextView tv = cell_tvs.get(row*COLUMN_COUNT+col);
+    private void flipTextView(int r, int c) {
+        TextView tv = cell_tvs.get(r*COLUMN_COUNT+c);
         tv.setTextColor(Color.GRAY);
         tv.setBackgroundColor(Color.LTGRAY);
     }
@@ -93,12 +98,19 @@ public class MainActivity extends AppCompatActivity {
         int n = findIndexOfCellTextView(tv);
         int i = n/COLUMN_COUNT;
         int j = n%COLUMN_COUNT;
+        if (!running) {runTimer();}
         if (gameOver == false)
         {
             if (!flagging) {
-                gameOver = playMinesweeperUtil(myBoard, i, j, movesLeft);
+                gameOver = recurseDown(currentGame, i, j);
                 if ((gameOver == false) && (movesLeft == 0)) {
                     // Switch to result page
+                    String message = "Used " + clock + " seconds. \n You won. \n Good Job!";
+
+                    Intent intent = new Intent(this, WinPage.class);
+                    intent.putExtra("com.example.sendmessage.MESSAGE", message);
+
+                    startActivity(intent);
                     gameOver = true;
                 }
             }
@@ -129,93 +141,72 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // A Recursive Function to play the Minesweeper Game
-    private boolean playMinesweeperUtil(char myBoard[][], int row, int col, int movesLeft)
+    private boolean recurseDown(char currentGame[][], int r, int c)
     {
         // Base Case of Recursion
-        if (myBoard[row][col] != '-') {
+        if (currentGame[r][c] != '-') {
             return (false);
         }
 
-        int i, j;
 
-        // You opened a mine
-        // You are going to lose
-        if (realBoard[row][col] == '*')
+        if (trueGame[r][c] == '*')
         {
-            myBoard[row][col]='*';
-
-            for (i=0; i<4; i++)
-                myBoard[mines[i][0]][mines[i][1]]='*';
-
+            currentGame[r][c]='*';
+            for (int i=0; i<4; i++) {
+                cell_tvs.get(mines[i][0]*COLUMN_COUNT+mines[i][1]).setText("💣");
+            }
+            running = false;
             return true;
         }
 
         else
         {
-            // Calculate the number of adjacent mines and put it
-            // on the board
-            int count = countAdjacentMines(row, col);
+            int count = countAdjacentMines(r, c);
             movesLeft--;
 
-            myBoard[row][col] = (char)(count + '0');
+            currentGame[r][c] = (char)(count + '0');
 
-            flipTextView(row, col);
+            flipTextView(r, c);
             if (count == 0) {
-                cell_tvs.get(row*COLUMN_COUNT+col).setText("");
+                cell_tvs.get(r*COLUMN_COUNT+c).setText("");
             }
             else {
-                cell_tvs.get(row*COLUMN_COUNT+col).setText(String.valueOf(count));
+                cell_tvs.get(r*COLUMN_COUNT+c).setText(String.valueOf(count));
             }
 
             if (count == 0)
             {
                 // Only process this cell if this is a valid one
-                if (isValid (row-1, col))
+                if (inBounds (r-1, c))
                 {
-                    if (!isMine (row-1, col))
-                        playMinesweeperUtil(myBoard, row-1, col, movesLeft);
+                    if (!safeHere (r-1, c)) recurseDown(currentGame, r-1, c);
                 }
-
-                if (isValid (row+1, col))
+                if (inBounds (r+1, c))
                 {
-                    if (!isMine (row+1, col))
-                        playMinesweeperUtil(myBoard, row+1, col, movesLeft);
+                    if (!safeHere (r+1, c)) recurseDown(currentGame, r+1, c);
                 }
-
-                if (isValid (row, col+1))
+                if (inBounds (r, c+1))
                 {
-                    if (!isMine (row, col+1))
-                        playMinesweeperUtil(myBoard, row, col+1, movesLeft);
+                    if (!safeHere (r, c+1)) recurseDown(currentGame, r, c+1);
                 }
-
-                if (isValid (row, col-1) == true)
+                if (inBounds (r, c-1) == true)
                 {
-                    if (!isMine (row, col-1))
-                        playMinesweeperUtil(myBoard, row, col-1, movesLeft);
+                    if (!safeHere (r, c-1)) recurseDown(currentGame, r, c-1);
                 }
-
-                if (isValid (row-1, col+1))
+                if (inBounds (r-1, c+1))
                 {
-                    if (!isMine (row-1, col+1))
-                        playMinesweeperUtil(myBoard, row-1, col+1, movesLeft);
+                    if (!safeHere (r-1, c+1)) recurseDown(currentGame, r-1, c+1);
                 }
-
-                if (isValid (row-1, col-1))
+                if (inBounds (r-1, c-1))
                 {
-                    if (!isMine (row-1, col-1))
-                        playMinesweeperUtil(myBoard, row-1, col-1, movesLeft);
+                    if (!safeHere (r-1, c-1)) recurseDown(currentGame, r-1, c-1);
                 }
-
-                if (isValid (row+1, col+1))
+                if (inBounds (r+1, c+1))
                 {
-                    if (!isMine (row+1, col+1))
-                        playMinesweeperUtil(myBoard, row+1, col+1, movesLeft);
-                }
-
-                if (isValid (row+1, col-1))
+                    if (!safeHere (r+1, c+1)) recurseDown(currentGame, r+1, c+1);                }
+                if (inBounds (r+1, c-1))
                 {
-                    if (!isMine (row+1, col-1))
-                        playMinesweeperUtil(myBoard, row+1, col-1, movesLeft);
+                    if (!safeHere (r+1, c-1)) recurseDown(currentGame, r+1, c-1);
                 }
             }
 
@@ -224,76 +215,66 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private boolean isMine (int row, int col)
+    private boolean safeHere (int r, int c)
     {
-        if (realBoard[row][col] == '*')
+        if (trueGame[r][c] == '*')
             return true;
         else
             return false;
     }
 
-    private boolean isValid(int row, int col)
+    private boolean inBounds(int r, int c)
     {
-        // Returns true if row number and column number
+        // Returns true if r number and cumn number
         // is in range
-        return (row >= 0) && (row < 10) &&
-                (col >= 0) && (col < 8);
+        return (r >= 0) && (r < 10) &&
+                (c >= 0) && (c < 8);
     }
 
-    private int countAdjacentMines(int row, int col)
+    private int countAdjacentMines(int r, int c)
     {
 
         int i;
         int count = 0;
 
-        if (isValid (row-1, col)) {
-            if (isMine (row-1, col))
-                count++;
+        if (inBounds (r-1, c)) {
+            if (safeHere (r-1, c)) count++;
         }
-        if (isValid (row+1, col))
+        if (inBounds (r+1, c))
         {
-            if (isMine (row+1, col))
-                count++;
+            if (safeHere (r+1, c)) count++;
         }
-        if (isValid (row, col+1))
+        if (inBounds (r, c+1))
         {
-            if (isMine (row, col+1))
-                count++;
+            if (safeHere (r, c+1)) count++;
         }
 
-        if (isValid (row, col-1))
+        if (inBounds (r, c-1))
         {
-            if (isMine (row, col-1))
-                count++;
+            if (safeHere (r, c-1)) count++;
         }
 
-        if (isValid (row-1, col+1))
+        if (inBounds (r-1, c+1))
         {
-            if (isMine (row-1, col+1))
-                count++;
+            if (safeHere (r-1, c+1)) count++;
         }
-        if (isValid (row-1, col-1))
+        if (inBounds (r-1, c-1))
         {
-            if (isMine (row-1, col-1))
-                count++;
+            if (safeHere (r-1, c-1)) count++;
         }
-        if (isValid (row+1, col+1))
+        if (inBounds (r+1, c+1))
         {
-            if (isMine (row+1, col+1))
-                count++;
+            if (safeHere (r+1, c+1)) count++;
         }
-        if (isValid (row+1, col-1))
+        if (inBounds (r+1, c-1))
         {
-            if (isMine (row+1, col-1))
-                count++;
+            if (safeHere (r+1, c-1)) count++;
         }
 
         return (count);
     }
 
 
-    // A Function to place the mines randomly
-    // on the board
     private void placeMines()
     {
         Random rand = new Random();
@@ -304,17 +285,14 @@ public class MainActivity extends AppCompatActivity {
             int x = random / COLUMN_COUNT;
             int y = random % COLUMN_COUNT;
 
-            // Add the mine if no mine is placed at this
-            // position on the board
-            // Row Index of the Mine
             mines[i][0]= x;
             // Column Index of the Mine
             mines[i][1] = y;
 
             // Place the mine
-            realBoard[mines[i][0]][mines[i][1]] = '*';
-            TextView tv01 = (TextView) findViewById(R.id.textView01);
-            cell_tvs.set(x * COLUMN_COUNT + y, tv01);
+            trueGame[mines[i][0]][mines[i][1]] = '*';
+            /*TextView tv01 = (TextView) findViewById(R.id.textView01);
+            cell_tvs.set(x * COLUMN_COUNT + y, tv01);*/
             i++;
         }
 
@@ -329,11 +307,29 @@ public class MainActivity extends AppCompatActivity {
         {
             for (int j=0; j<8; j++)
             {
-                myBoard[i][j] = realBoard[i][j] = '-';
+                currentGame[i][j] = trueGame[i][j] = '-';
             }
         }
 
         return;
     }
 
+    public void runTimer() {
+        final TextView timeView = (TextView) findViewById(R.id.textViewTimer);
+        final Handler handler = new Handler();
+        running = true;
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                int seconds = clock%60;
+                timeView.setText(String.valueOf(seconds));
+
+                if (running) {
+                    clock++;
+                }
+                handler.postDelayed(this, 1000);
+            }
+        });
+    }
 }
