@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
         else
         {
-            int count = countAdjacentMines(r, c);
+            int count = nearbyMines(r, c);
             movesLeft--;
 
             currentGame[r][c] = (char)(count + '0');
@@ -231,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
                 (c >= 0) && (c < 8);
     }
 
-    private int countAdjacentMines(int r, int c)
+    private int nearbyMines(int r, int c)
     {
 
         int i;
@@ -278,7 +278,6 @@ public class MainActivity extends AppCompatActivity {
     private void placeMines()
     {
         Random rand = new Random();
-        // Continue until all random mines have been created.
         for (int i=0; i<4; )
         {
             int random = rand.nextInt(ROW_COUNT * COLUMN_COUNT);
@@ -286,10 +285,8 @@ public class MainActivity extends AppCompatActivity {
             int y = random % COLUMN_COUNT;
 
             mines[i][0]= x;
-            // Column Index of the Mine
             mines[i][1] = y;
 
-            // Place the mine
             trueGame[mines[i][0]][mines[i][1]] = '*';
             /*TextView tv01 = (TextView) findViewById(R.id.textView01);
             cell_tvs.set(x * COLUMN_COUNT + y, tv01);*/
@@ -299,13 +296,11 @@ public class MainActivity extends AppCompatActivity {
         return;
     }
 
-    // A Function to initialise the game
     private void initialise()
     {
-        // Assign all the cells as mine-free
-        for (int i=0; i<10; i++)
+        for (int i=0; i<ROW_COUNT; i++)
         {
-            for (int j=0; j<8; j++)
+            for (int j=0; j<COLUMN_COUNT; j++)
             {
                 currentGame[i][j] = trueGame[i][j] = '-';
             }
