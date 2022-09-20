@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
         trueGame = new char[ROW_COUNT][COLUMN_COUNT];
         currentGame = new char[ROW_COUNT][COLUMN_COUNT];
 
-        initialise();
+        setUp();
         placeMines();
     }
 
@@ -274,6 +274,24 @@ public class MainActivity extends AppCompatActivity {
         return (count);
     }
 
+    public void runTimer() {
+        final TextView timeView = (TextView) findViewById(R.id.textViewTimer);
+        final Handler handler = new Handler();
+        running = true;
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                int seconds = clock%60;
+                timeView.setText(String.valueOf(seconds));
+
+                if (running) {
+                    clock++;
+                }
+                handler.postDelayed(this, 1000);
+            }
+        });
+    }
 
     private void placeMines()
     {
@@ -296,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
         return;
     }
 
-    private void initialise()
+    private void setUp()
     {
         for (int i=0; i<ROW_COUNT; i++)
         {
@@ -309,22 +327,5 @@ public class MainActivity extends AppCompatActivity {
         return;
     }
 
-    public void runTimer() {
-        final TextView timeView = (TextView) findViewById(R.id.textViewTimer);
-        final Handler handler = new Handler();
-        running = true;
 
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                int seconds = clock%60;
-                timeView.setText(String.valueOf(seconds));
-
-                if (running) {
-                    clock++;
-                }
-                handler.postDelayed(this, 1000);
-            }
-        });
-    }
 }
