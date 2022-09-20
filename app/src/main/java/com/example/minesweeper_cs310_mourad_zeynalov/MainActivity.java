@@ -11,7 +11,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.lang.Math;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,7 +26,9 @@ public class MainActivity extends AppCompatActivity {
     public char realBoard[][];
     public char myBoard[][];
     public int movesLeft = ROW_COUNT * COLUMN_COUNT - 4;
-    public Boolean gameOver = false;
+    public boolean gameOver = false;
+    public boolean flagging = false;
+    public int flagCount = 4;
 
     private int dpToPixel(int dp) {
         float density = Resources.getSystem().getDisplayMetrics().density;
@@ -39,13 +41,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         cell_tvs = new ArrayList<TextView>();
-
-        initialise();
-        placeMines();
-
-        mines = new int[4][2];
-        realBoard = new char[10][8];
-        myBoard = new char[10][8];
 
         GridLayout grid = (GridLayout) findViewById(R.id.gridLayout01);
         LayoutInflater li = LayoutInflater.from(this);
@@ -67,6 +62,15 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        TextView tvb = (TextView) findViewById(R.id.textViewButton01);
+        tvb.setOnClickListener(this::onClickFlag);
+
+        mines = new int[4][2];
+        realBoard = new char[ROW_COUNT][COLUMN_COUNT];
+        myBoard = new char[ROW_COUNT][COLUMN_COUNT];
+
+        initialise();
+        placeMines();
     }
 
     private int findIndexOfCellTextView(TextView tv) {
@@ -91,21 +95,46 @@ public class MainActivity extends AppCompatActivity {
         int j = n%COLUMN_COUNT;
         if (gameOver == false)
         {
-            gameOver = playMinesweeperUtil (myBoard, i, j, movesLeft);
-            if ((gameOver == false) && (movesLeft == 0))
-            {
-            // Switch to result page
-                gameOver = true;
+            if (!flagging) {
+                gameOver = playMinesweeperUtil(myBoard, i, j, movesLeft);
+                if ((gameOver == false) && (movesLeft == 0)) {
+                    // Switch to result page
+                    gameOver = true;
+                }
+            }
+            else {
+                if (tv.getText() != "🚩") {
+                    cell_tvs.get(i*COLUMN_COUNT+j).setText("🚩");
+                    flagCount--;
+                } else {
+                    cell_tvs.get(i*COLUMN_COUNT+j).setText("");
+                    flagCount++;
+                }
+                TextView tvfc = (TextView) findViewById(R.id.textViewFlagCount);
+                tvfc.setText(String.valueOf(flagCount));
             }
         }
     }
 
+    public void onClickFlag(View view){
+        TextView tv = (TextView) view;
+        if(tv.getText() == "@string/flag" || tv.getText() == "🚩") {
+            flagging = false;
+            tv.setText("⛏");
+        }
+        else {
+            flagging = true;
+            tv.setText("🚩");
+        }
+    }
+
     // A Recursive Function to play the Minesweeper Game
-    private Boolean playMinesweeperUtil(char myBoard[][], int row, int col, int movesLeft)
+    private boolean playMinesweeperUtil(char myBoard[][], int row, int col, int movesLeft)
     {
         // Base Case of Recursion
-        if (myBoard[row][col] != '-')
+        if (myBoard[row][col] != '-') {
             return (false);
+        }
 
         int i, j;
 
@@ -131,56 +160,61 @@ public class MainActivity extends AppCompatActivity {
             myBoard[row][col] = (char)(count + '0');
 
             flipTextView(row, col);
-            cell_tvs.get(row*COLUMN_COUNT+col).setText(String.valueOf(count));
+            if (count == 0) {
+                cell_tvs.get(row*COLUMN_COUNT+col).setText("");
+            }
+            else {
+                cell_tvs.get(row*COLUMN_COUNT+col).setText(String.valueOf(count));
+            }
 
-            if (count != 0)
+            if (count == 0)
             {
                 // Only process this cell if this is a valid one
                 if (isValid (row-1, col))
                 {
-                    if (isMine (row-1, col))
+                    if (!isMine (row-1, col))
                         playMinesweeperUtil(myBoard, row-1, col, movesLeft);
                 }
 
                 if (isValid (row+1, col))
                 {
-                    if (isMine (row+1, col))
+                    if (!isMine (row+1, col))
                         playMinesweeperUtil(myBoard, row+1, col, movesLeft);
                 }
 
                 if (isValid (row, col+1))
                 {
-                    if (isMine (row, col+1))
+                    if (!isMine (row, col+1))
                         playMinesweeperUtil(myBoard, row, col+1, movesLeft);
                 }
 
                 if (isValid (row, col-1) == true)
                 {
-                    if (isMine (row, col-1))
+                    if (!isMine (row, col-1))
                         playMinesweeperUtil(myBoard, row, col-1, movesLeft);
                 }
 
                 if (isValid (row-1, col+1))
                 {
-                    if (isMine (row-1, col+1))
+                    if (!isMine (row-1, col+1))
                         playMinesweeperUtil(myBoard, row-1, col+1, movesLeft);
                 }
 
                 if (isValid (row-1, col-1))
                 {
-                    if (isMine (row-1, col-1))
+                    if (!isMine (row-1, col-1))
                         playMinesweeperUtil(myBoard, row-1, col-1, movesLeft);
                 }
 
                 if (isValid (row+1, col+1))
                 {
-                    if (isMine (row+1, col+1))
+                    if (!isMine (row+1, col+1))
                         playMinesweeperUtil(myBoard, row+1, col+1, movesLeft);
                 }
 
                 if (isValid (row+1, col-1))
                 {
-                    if (isMine (row+1, col-1))
+                    if (!isMine (row+1, col-1))
                         playMinesweeperUtil(myBoard, row+1, col-1, movesLeft);
                 }
             }
@@ -190,7 +224,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private Boolean isMine (int row, int col)
+    private boolean isMine (int row, int col)
     {
         if (realBoard[row][col] == '*')
             return true;
@@ -198,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
     }
 
-    private Boolean isValid(int row, int col)
+    private boolean isValid(int row, int col)
     {
         // Returns true if row number and column number
         // is in range
@@ -262,29 +296,26 @@ public class MainActivity extends AppCompatActivity {
     // on the board
     private void placeMines()
     {
-        Boolean mark[] = new Boolean[10*8];
-
+        Random rand = new Random();
         // Continue until all random mines have been created.
         for (int i=0; i<4; )
         {
-            int random = (int)Math.random() % (10*8);
-            int x = random / 8;
-            int y = random % 8;
+            int random = rand.nextInt(ROW_COUNT * COLUMN_COUNT);
+            int x = random / COLUMN_COUNT;
+            int y = random % COLUMN_COUNT;
 
             // Add the mine if no mine is placed at this
             // position on the board
-            if (mark[random] == false)
-            {
-                // Row Index of the Mine
-                mines[i][0]= x;
-                // Column Index of the Mine
-                mines[i][1] = y;
+            // Row Index of the Mine
+            mines[i][0]= x;
+            // Column Index of the Mine
+            mines[i][1] = y;
 
-                // Place the mine
-                realBoard[mines[i][0]][mines[i][1]] = '*';
-                mark[random] = true;
-                i++;
-            }
+            // Place the mine
+            realBoard[mines[i][0]][mines[i][1]] = '*';
+            TextView tv01 = (TextView) findViewById(R.id.textView01);
+            cell_tvs.set(x * COLUMN_COUNT + y, tv01);
+            i++;
         }
 
         return;
